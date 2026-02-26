@@ -213,29 +213,36 @@ function! plantuml_previewer#refresh(bufnr) "{{{
   call s:run_in_background(cmd)
 endfunction "}}}
 
-function! plantuml_previewer#save_as(...) "{{{
+function! plantuml_previewer#save_as(...) "{{{ 
   if !executable(s:java_path())
     echoerr 'require java command'
     return
   endif
 
-  let save_path = get(a:000, 0, 0)
-  let image_type = get(a:000, 1, 0)
-  if s:is_zero(save_path)
+  let args = a:000
+  let save_path = get(args, 0, '')
+  let image_type = get(args, 1, '')
+
+  " If no arguments provided, default to saving as PNG in the same directory
+  if empty(save_path) && empty(image_type)
+    let source_name = expand('%:t:r')
+    let save_path = expand('%:p:h') . '/' . source_name . '.png'
+  elseif s:is_zero(save_path)
     let source_name = expand('%:t:r')
     let save_path = printf("%s.%s", source_name, s:fmt_to_ext(s:save_format()))
   else
     let save_path = fnamemodify(save_path, ':p')
   endif
+
   if s:is_zero(image_type)
     let ext = fnamemodify(save_path, ':e')
-    let image_type = ext == '' ? s:save_format() : s:ext_to_fmt(ext)
+    let image_type = ext == '' ? 'png' : s:ext_to_fmt(ext)
   endif
 
   let puml_src_path = expand('%:p')
   let puml_filename = fnamemodify(puml_src_path, ':t:r')
   let image_ext = s:fmt_to_ext(image_type)
-  let output_dir_path = s:tmp_path
+  let output_dir_path = fnamemodify(puml_src_path, ':h')
   let output_path = output_dir_path . '/' . puml_filename . '.' . image_ext
   call mkdir(fnamemodify(save_path, ':p:h'), 'p')
   let cmd = [
